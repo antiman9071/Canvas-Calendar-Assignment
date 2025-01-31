@@ -1,10 +1,16 @@
+from dataclasses import dataclass
 import icalendar
 import pytz, zoneinfo, dateutil.tz  
 from datetime import datetime
 from pathlib import Path
-import xlwt
 from sys import argv
 import os
+
+@dataclass
+class dailyTask:
+    date:str
+    dayOfTheWeek:str
+    key:str
 
 #TODO create a way to check for days of the week then write to excel
 def grab_assignment(summary):
@@ -24,12 +30,11 @@ def grab_assignment(summary):
         return None
 
 def sort_assignments(calendarDict):
-
+    workingList = list()
     for key in calendarDict.keys():
-        if(isinstance(calendarDict.get(key),datetime)):
-            return "done"
-        else:
-            return calendarDict.get(key)
+        value=calendarDict.get(key)
+        workingList.append(dailyTask(value.strftime("%m/%d/%y"), value.strftime("%A"), key))
+    return workingList
     
 if len(argv) > 1:
     ics_path = Path(argv[1])
@@ -43,7 +48,18 @@ with ics_path.open(encoding='utf8') as fileIN:
     calendar = icalendar.Calendar.from_ical(fileIN.read())
 calendarDict = dict()
 for event in calendar.walk('VEVENT'):
-    calendarDict[event.get("SUMMARY")] = event["DTSTART"].dt.strftime("%A|%m/%d/%y")
-for key in calendarDict.keys():
-    print("key=", grab_assignment(key), "value=",calendarDict.get(key))
-print(sort_assignments(calendarDict))
+    if grab_assignment(event.get("SUMMARY")) != None:
+        calendarDict[grab_assignment(event.get("SUMMARY"))] = event["DTSTART"].dt
+        print(event["DTSTART"].dt.strftime("%A"))
+
+workingList = sort_assignments(calendarDict)
+lastDate = None;
+for dailyTask in workingList:
+    if(lastDate == dailyTask.date):
+        print(dailyTask.key)
+    else:
+        print()
+        input("press anything to continue")
+        print(dailyTask.date, dailyTask.dayOfTheWeek)
+        print(dailyTask.key)
+    lastDate = dailyTask.date
