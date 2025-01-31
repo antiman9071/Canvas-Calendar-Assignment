@@ -1,4 +1,6 @@
 import icalendar
+import pytz, zoneinfo, dateutil.tz  
+from datetime import datetime
 from pathlib import Path
 import xlwt
 from sys import argv
@@ -21,12 +23,27 @@ def grab_assignment(summary):
     else:
         return None
 
+def sort_assignments(calendarDict):
+
+    for key in calendarDict.keys():
+        if(isinstance(calendarDict.get(key),datetime)):
+            return "done"
+        else:
+            return calendarDict.get(key)
+    
 if len(argv) > 1:
     ics_path = Path(argv[1])
 else:
-    ics_path = Path(os.getcwd() + "\Downloads\canvas_output.ics")
+    if os.name != "posix":
+        ics_path = Path(os.getcwd() + "\Downloads\canvas_output.ics")
+    else:
+        ics_path = Path(os.getcwd() + "/Downloads/canvas_output.ics")
 
 with ics_path.open(encoding='utf8') as fileIN:
     calendar = icalendar.Calendar.from_ical(fileIN.read())
-    for event in calendar.walk('VEVENT'):
-        print(grab_assignment(event.get("SUMMARY")))
+calendarDict = dict()
+for event in calendar.walk('VEVENT'):
+    calendarDict[event.get("SUMMARY")] = event["DTSTART"].dt.strftime("%A|%m/%d/%y")
+for key in calendarDict.keys():
+    print("key=", grab_assignment(key), "value=",calendarDict.get(key))
+print(sort_assignments(calendarDict))
