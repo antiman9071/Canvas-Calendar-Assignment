@@ -5,11 +5,14 @@ from datetime import datetime
 from pathlib import Path
 from sys import argv
 import os
+import xlwt
+import xlrd
+from xlutils.copy import copy
 
 @dataclass
 class dailyTask:
-    date:str
-    dayOfTheWeek:str
+    date:int
+    dayOfTheWeek:int
     key:str
 
 #TODO create a way to check for days of the week then write to excel
@@ -33,7 +36,7 @@ def sort_assignments(calendarDict):
     workingList = list()
     for key in calendarDict.keys():
         value=calendarDict.get(key)
-        workingList.append(dailyTask(value.strftime("%m/%d/%y"), value.strftime("%A"), key))
+        workingList.append(dailyTask(int(value.strftime("%W"))-1, int(value.strftime("%u"))+1, key))
     return workingList
     
 if len(argv) > 1:
@@ -50,16 +53,20 @@ calendarDict = dict()
 for event in calendar.walk('VEVENT'):
     if grab_assignment(event.get("SUMMARY")) != None:
         calendarDict[grab_assignment(event.get("SUMMARY"))] = event["DTSTART"].dt
-        print(event["DTSTART"].dt.strftime("%A"))
 
 workingList = sort_assignments(calendarDict)
-lastDate = None;
+lastDate = 0
+lastDOW = 0
+rb = xlrd.open_workbook('classwork/Semester at a Glance- SP 25 LC.xls')
+wb = copy(rb)
+wksheet = wb.get_sheet(0)
+data = None
 for dailyTask in workingList:
-    if(lastDate == dailyTask.date):
-        print(dailyTask.key)
+    if(dailyTask.date == lastDate and dailyTask.dayOfTheWeek == lastDOW):
+        data += "\n" + dailyTask.key
     else:
-        print()
-        input("press anything to continue")
-        print(dailyTask.date, dailyTask.dayOfTheWeek)
-        print(dailyTask.key)
+        wksheet.write(lastDate, lastDOW, data)
+        data = dailyTask.key
+    lastDOW = dailyTask.dayOfTheWeek
     lastDate = dailyTask.date
+wb.save('classwork/Semester at a Glance- SP 25 LC.xls')
